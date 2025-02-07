@@ -1,0 +1,35 @@
+@use 'global' as global;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100vh;
+  min-width: 360px;
+
+  .content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px;
+    width: 100%;
+    height: calc(100vh - (20px + 54px + 20px));
+    box-sizing: border-box;
+  }
+
+  .finalMessage {
+    display: flex;
+    align-items: center;
+    height: 100%;
+
+    & > span {
+      text-align: center;
+      font-size: 24px;
+      font-weight: 700;
+    }
+  }
+}
+
+.promo {
+  background: global.$promo-bg-color;
+}

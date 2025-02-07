@@ -1,95 +1,104 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+'use client';
 
-export default function Home() {
+import { useEffect, useState } from 'react';
+import { Header } from '@/components/Header/Header';
+import { Question } from '@/components/Question/Question';
+import { getNextQuestionId } from '@/utils.ts';
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
+import { SET_ANSWER, SET_CURRENT_QUESTION } from '@/lib/features/question/questionSlice';
+import { QUESTION_TYPE } from '@/constants';
+import { UserAnswers } from '@/types';
+import styles from './root.module.scss';
+import clsx from 'clsx';
+
+// I think dynamic routing is useless in this situation. If we generate pages
+// via their ids it will suffocate the logic and security aspects of the application.
+// Users would be able to ruin questionnaire flow by accessing wrong questions
+// just by brood forcing URL params. In that case, we will need to add logic to prevent
+// such behavior that will only increase the complexity of the application without any gain
+
+// export async function generateStaticParams() {
+//   return [];
+// }
+
+const App = () => {
+  const dispatch = useAppDispatch();
+  const { userId, questionnaire, currentQuestion, answers } = useAppSelector(
+    (state) => state.question
+  );
+  const [isEnd, setIsEnd] = useState(false);
+  const isPromo = currentQuestion.type === QUESTION_TYPE.PROMO;
+
+  // It's possible to store each answer in the user json file right on the moment it was selected.
+  // In that case, we will be able to continue the user's journey through the survey
+  const handleSelect = (index: number) => {
+    dispatch(SET_ANSWER({ questionId: currentQuestion.id, answer: String(index) }));
+
+    const nextId = getNextQuestionId(currentQuestion);
+
+    if (nextId) {
+      dispatch(SET_CURRENT_QUESTION({ question: questionnaire.questions[nextId] }));
+    } else if (nextId === null) {
+      setIsEnd(true);
+      handleStoreAnswers();
+    }
+  };
+
+  const handleBack = () => {
+    if (currentQuestion.prev) {
+      dispatch(SET_CURRENT_QUESTION({ question: questionnaire.questions[currentQuestion.prev] }));
+    }
+  };
+
+  const handleStoreAnswers = async () => {
+    const data: UserAnswers = {
+      userId,
+      questionnaireId: questionnaire.id,
+      answers
+    };
+
+    fetch(`/api/userAnswer/${questionnaire.id}/${userId}`, {
+      method: 'POST',
+      body: JSON.stringify({ data })
+    }).catch((err) => console.error('POST error:', err));
+  };
+
+  // The data from GET request could be used for saving survey progress if user leaves the page
+  // In that case we will need to use this data as an initial state of a reducer
+  useEffect(() => {
+    fetch(`/api/userAnswer/${questionnaire.id}/${userId}`)
+      .then((res) => res.json())
+      .then((data) => console.log(data))
+      .catch((err) => console.error('GET error:', err));
+  }, [questionnaire.id, userId]);
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+    <div
+      className={clsx(styles.root, {
+        [styles.promo]: isPromo
+      })}
+    >
+      <Header
+        isBack={Boolean(currentQuestion.prev && !isEnd)}
+        back={handleBack}
+        isPromo={isPromo}
+      />
+      <div className={styles.content}>
+        {isEnd ? (
+          <div className={styles.finalMessage}>
+            <span>Thank you for participating in a survey!</span>
+          </div>
+        ) : (
+          <Question
+            question={currentQuestion}
+            selected={answers[currentQuestion.id] ?? null}
+            select={handleSelect}
+            isPromo={isPromo}
           />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        )}
+      </div>
     </div>
   );
-}
+};
+
+export default App;

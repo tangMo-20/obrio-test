@@ -1,0 +1,23 @@
+.root {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 54px;
+  width: 100%;
+  position: relative;
+
+  & > img {
+    cursor: pointer;
+  }
+
+  .back {
+    position: absolute;
+    left: 16px;
+  }
+}
+
+@media (min-width: 360px) {
+  .back {
+    left: 10%;
+  }
+}
