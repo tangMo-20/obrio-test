@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Header } from '@/components/Header/Header';
 import { Question } from '@/components/Question/Question';
-import { getNextQuestionId } from '@/utils.ts';
+import { getNextQuestionId, parseQuestionTitle } from '@/utils.ts';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { SET_ANSWER, SET_CURRENT_QUESTION } from '@/lib/features/question/questionSlice';
 import { QUESTION_TYPE } from '@/constants';
@@ -87,6 +87,19 @@ const App = () => {
         {isEnd ? (
           <div className={styles.finalMessage}>
             <span>Thank you for participating in a survey!</span>
+            {Object.entries(answers).map(([questionId, answerId]) => {
+              const title = parseQuestionTitle(questionnaire.questions[questionId].title);
+              const subtitle = questionnaire.questions[questionId].subtitle;
+              const answer = questionnaire.questions[questionId].answers[Number(answerId)];
+
+              return (
+                <div key={questionId} className={styles.answerDisplay}>
+                  <span className={styles.question}>{title}</span>
+                  {subtitle && <span className={styles.question}>{subtitle}</span>}
+                  <span className={styles.answer}>{answer}</span>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <Question
